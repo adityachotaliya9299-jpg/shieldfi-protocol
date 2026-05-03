@@ -8,15 +8,12 @@ export function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-2xl">🛡️</span>
+            <span className="text-2xl">&#128737;</span>
             <span className="font-bold text-xl text-white">ShieldFi</span>
           </Link>
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-400">
             <Link href="/" className="hover:text-white transition-colors">
               Dashboard
-            </Link>
-            <Link href="/markets" className="hover:text-white transition-colors">
-              Markets
             </Link>
             
               href="https://github.com/adityachotaliya9299-jpg/shieldfi-protocol"
