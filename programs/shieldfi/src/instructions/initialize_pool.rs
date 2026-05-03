@@ -5,7 +5,6 @@ use crate::errors::ShieldFiError;
 use crate::state::{LendingPool, PoolConfig};
 
 pub fn initialize_pool(ctx: Context<InitializePool>, config: PoolConfig) -> Result<()> {
-    // Validate config values make sense
     require!(
         config.collateral_factor < config.liquidation_threshold,
         ShieldFiError::InvalidPoolConfig
@@ -18,21 +17,23 @@ pub fn initialize_pool(ctx: Context<InitializePool>, config: PoolConfig) -> Resu
     let pool = &mut ctx.accounts.pool;
     let bump = ctx.bumps.pool;
 
-    pool.authority = ctx.accounts.authority.key();
-    pool.token_mint = ctx.accounts.token_mint.key();
-    pool.token_vault = ctx.accounts.token_vault.key();
-    pool.total_deposits = 0;
-    pool.total_borrows = 0;
-    pool.reserve_factor = config.reserve_factor;
-    pool.collateral_factor = config.collateral_factor;
+    pool.authority           = ctx.accounts.authority.key();
+    pool.token_mint          = ctx.accounts.token_mint.key();
+    pool.token_vault         = ctx.accounts.token_vault.key();
+    pool.oracle              = config.oracle;
+    pool.total_deposits      = 0;
+    pool.total_borrows       = 0;
+    pool.reserve_factor      = config.reserve_factor;
+    pool.collateral_factor   = config.collateral_factor;
     pool.liquidation_threshold = config.liquidation_threshold;
-    pool.liquidation_bonus = config.liquidation_bonus;
-    pool.is_paused = false;
-    pool.bump = bump;
+    pool.liquidation_bonus   = config.liquidation_bonus;
+    pool.is_paused           = false;
+    pool.bump                = bump;
 
     msg!(
-        "ShieldFi pool initialized for mint: {}",
-        ctx.accounts.token_mint.key()
+        "ShieldFi pool initialized. Mint: {} | Oracle: {}",
+        ctx.accounts.token_mint.key(),
+        config.oracle
     );
 
     Ok(())
@@ -40,14 +41,11 @@ pub fn initialize_pool(ctx: Context<InitializePool>, config: PoolConfig) -> Resu
 
 #[derive(Accounts)]
 pub struct InitializePool<'info> {
-    /// The admin creating this pool
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    /// The SPL token this pool will support
     pub token_mint: Account<'info, Mint>,
 
-    /// Pool state PDA — seeded by "pool" + mint address
     #[account(
         init,
         payer = authority,
@@ -57,7 +55,6 @@ pub struct InitializePool<'info> {
     )]
     pub pool: Account<'info, LendingPool>,
 
-    /// Token vault PDA — holds all deposited tokens
     #[account(
         init,
         payer = authority,
