@@ -18,13 +18,27 @@ pub mod shieldfi {
         instructions::initialize_pool(ctx, config)
     }
 
-    // Phase 2 instructions — coming next:
-    // pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()>
-    // pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()>
-    // pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()>
-    // pub fn repay(ctx: Context<Repay>, amount: u64) -> Result<()>
+    /// Deposit tokens as collateral into the pool
+    pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
+        instructions::deposit(ctx, amount)
+    }
 
-    // Phase 3 — Liquidation:
+    /// Withdraw previously deposited collateral
+    pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
+        instructions::withdraw(ctx, amount)
+    }
+
+    /// Borrow tokens against deposited collateral
+    pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
+        instructions::borrow(ctx, amount)
+    }
+
+    /// Repay borrowed tokens (interest first, then principal)
+    pub fn repay(ctx: Context<Repay>, amount: u64) -> Result<()> {
+        instructions::repay(ctx, amount)
+    }
+
+    // Phase 3 — Liquidation + Oracle:
     // pub fn liquidate(ctx: Context<Liquidate>, repay_amount: u64) -> Result<()>
 
     // Phase 4 — Admin / Security:
