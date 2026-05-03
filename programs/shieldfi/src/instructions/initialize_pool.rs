@@ -13,11 +13,20 @@ pub fn initialize_pool(ctx: Context<InitializePool>, config: PoolConfig) -> Resu
         config.liquidation_threshold <= 10_000,
         ShieldFiError::InvalidPoolConfig
     );
+    require!(
+        config.reserve_factor <= 5_000,
+        ShieldFiError::InvalidPoolConfig
+    );
+    require!(
+        config.liquidation_bonus <= 2_000,
+        ShieldFiError::InvalidPoolConfig
+    );
 
-    let pool = &mut ctx.accounts.pool;
-    let bump = ctx.bumps.pool;
+    let pool        = &mut ctx.accounts.pool;
+    let bump        = ctx.bumps.pool;
 
     pool.authority           = ctx.accounts.authority.key();
+    pool.pending_authority   = Pubkey::default(); // No pending transfer
     pool.token_mint          = ctx.accounts.token_mint.key();
     pool.token_vault         = ctx.accounts.token_vault.key();
     pool.oracle              = config.oracle;
@@ -31,9 +40,10 @@ pub fn initialize_pool(ctx: Context<InitializePool>, config: PoolConfig) -> Resu
     pool.bump                = bump;
 
     msg!(
-        "ShieldFi pool initialized. Mint: {} | Oracle: {}",
+        "ShieldFi pool initialized. Mint: {} | Oracle: {} | Authority: {}",
         ctx.accounts.token_mint.key(),
-        config.oracle
+        config.oracle,
+        ctx.accounts.authority.key(),
     );
 
     Ok(())
