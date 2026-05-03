@@ -1,6 +1,12 @@
 "use client";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+
+// Dynamic import prevents SSR hydration mismatch
+const WalletMultiButton = dynamic(
+  async () => (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
+  { ssr: false }
+);
 
 export function Navbar() {
   return (
