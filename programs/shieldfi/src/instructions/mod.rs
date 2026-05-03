@@ -4,6 +4,9 @@ pub mod withdraw;
 pub mod borrow;
 pub mod repay;
 pub mod liquidate;
+pub mod pause;
+pub mod update_config;
+pub mod transfer_authority;
 
 pub use initialize_pool::*;
 pub use deposit::*;
@@ -11,3 +14,6 @@ pub use withdraw::*;
 pub use borrow::*;
 pub use repay::*;
 pub use liquidate::*;
+pub use pause::*;
+pub use update_config::*;
+pub use transfer_authority::*;
