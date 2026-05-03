@@ -2,28 +2,27 @@ use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer};
 
 use crate::errors::ShieldFiError;
-use crate::state::{get_validated_price, LendingPool, UserPosition, PRICE_PRECISION};
+use crate::state::{get_validated_price, LendingPool, OraclePriceAccount, UserPosition, PRICE_PRECISION};
 
 pub fn liquidate(ctx: Context<Liquidate>, repay_amount: u64) -> Result<()> {
     require!(repay_amount > 0, ShieldFiError::ZeroAmount);
     require!(!ctx.accounts.pool.is_paused, ShieldFiError::ProtocolPaused);
 
-    // Oracle must match what the pool registered
+    // Verify oracle matches pool's registered oracle
     require!(
         ctx.accounts.oracle.key() == ctx.accounts.pool.oracle,
         ShieldFiError::OracleMismatch
     );
 
-    // Use unix_timestamp for pyth 0.8.0 staleness check
-    let current_time = Clock::get()?.unix_timestamp;
+    let current_slot = Clock::get()?.slot;
 
-    // Fetch real-time validated price from Pyth
-    let token_price_usd = get_validated_price(&ctx.accounts.oracle, current_time)?;
+    // Fetch validated price — staleness + confidence checks happen inside
+    let token_price_usd = get_validated_price(&ctx.accounts.oracle, current_slot)?;
 
     let position = &ctx.accounts.borrower_position;
     let pool = &ctx.accounts.pool;
 
-    // Collateral value in USD (6 decimal precision)
+    // Collateral value in USD
     let collateral_value_usd = position
         .deposited_amount
         .checked_mul(token_price_usd)
@@ -31,7 +30,7 @@ pub fn liquidate(ctx: Context<Liquidate>, repay_amount: u64) -> Result<()> {
         .checked_div(PRICE_PRECISION)
         .ok_or(ShieldFiError::MathOverflow)?;
 
-    // Total debt value in USD
+    // Total debt
     let total_debt = position
         .borrowed_amount
         .checked_add(position.accrued_interest)
@@ -43,8 +42,7 @@ pub fn liquidate(ctx: Context<Liquidate>, repay_amount: u64) -> Result<()> {
         .checked_div(PRICE_PRECISION)
         .ok_or(ShieldFiError::MathOverflow)?;
 
-    // Health = (collateral_usd * liq_threshold) / debt_usd
-    // Liquidatable when health < 10_000
+    // Health factor — liquidatable when < 10_000
     let health = collateral_value_usd
         .checked_mul(pool.liquidation_threshold)
         .ok_or(ShieldFiError::MathOverflow)?
@@ -53,7 +51,7 @@ pub fn liquidate(ctx: Context<Liquidate>, repay_amount: u64) -> Result<()> {
 
     require!(health < 10_000, ShieldFiError::PositionHealthy);
 
-    // Max liquidatable = 50% of outstanding debt (partial liquidation only)
+    // Partial liquidation: max 50% of debt per tx
     let max_repay = total_debt.checked_div(2).ok_or(ShieldFiError::MathOverflow)?;
     require!(repay_amount <= max_repay, ShieldFiError::LiquidationTooLarge);
 
@@ -74,14 +72,16 @@ pub fn liquidate(ctx: Context<Liquidate>, repay_amount: u64) -> Result<()> {
         ShieldFiError::InsufficientCollateral
     );
 
-    // Step 1: Liquidator repays borrower's debt → vault
+    // Step 1: Liquidator repays debt → vault
     let cpi_accounts = Transfer {
         from: ctx.accounts.liquidator_token_account.to_account_info(),
         to: ctx.accounts.token_vault.to_account_info(),
         authority: ctx.accounts.liquidator.to_account_info(),
     };
-    let cpi_ctx = CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts);
-    token::transfer(cpi_ctx, repay_amount)?;
+    token::transfer(
+        CpiContext::new(ctx.accounts.token_program.to_account_info(), cpi_accounts),
+        repay_amount,
+    )?;
 
     // Step 2: Vault sends collateral + bonus to liquidator
     let token_mint_key = ctx.accounts.token_mint.key();
@@ -93,47 +93,43 @@ pub fn liquidate(ctx: Context<Liquidate>, repay_amount: u64) -> Result<()> {
         to: ctx.accounts.liquidator_token_account.to_account_info(),
         authority: ctx.accounts.pool.to_account_info(),
     };
-    let cpi_ctx = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        cpi_accounts,
-        signer_seeds,
-    );
-    token::transfer(cpi_ctx, collateral_to_seize)?;
+    token::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            signer_seeds,
+        ),
+        collateral_to_seize,
+    )?;
 
-    // Update borrower position — clear interest first, then principal
+    // Update borrower position
     let position = &mut ctx.accounts.borrower_position;
-    let mut remaining_repay = repay_amount;
-
-    if remaining_repay >= position.accrued_interest {
-        remaining_repay -= position.accrued_interest;
+    let mut remaining = repay_amount;
+    if remaining >= position.accrued_interest {
+        remaining -= position.accrued_interest;
         position.accrued_interest = 0;
     } else {
-        position.accrued_interest -= remaining_repay;
-        remaining_repay = 0;
+        position.accrued_interest -= remaining;
+        remaining = 0;
     }
-
     position.borrowed_amount = position
         .borrowed_amount
-        .checked_sub(remaining_repay)
+        .checked_sub(remaining)
         .ok_or(ShieldFiError::MathOverflow)?;
-
     position.deposited_amount = position
         .deposited_amount
         .checked_sub(collateral_to_seize)
         .ok_or(ShieldFiError::MathOverflow)?;
-
     position.last_update_slot = Clock::get()?.slot;
 
     // Update pool totals
     let pool = &mut ctx.accounts.pool;
-    pool.total_borrows = pool.total_borrows.saturating_sub(remaining_repay);
+    pool.total_borrows = pool.total_borrows.saturating_sub(remaining);
     pool.total_deposits = pool.total_deposits.saturating_sub(collateral_to_seize);
 
     msg!(
-        "Liquidation: {} repaid, {} collateral seized, health was {}",
-        repay_amount,
-        collateral_to_seize,
-        health
+        "Liquidation: {} repaid, {} seized, health was {}",
+        repay_amount, collateral_to_seize, health
     );
 
     Ok(())
@@ -144,7 +140,7 @@ pub struct Liquidate<'info> {
     #[account(mut)]
     pub liquidator: Signer<'info>,
 
-    /// CHECK: We only read their position PDA
+    /// CHECK: Only used as key reference for position PDA
     pub borrower: UncheckedAccount<'info>,
 
     pub token_mint: Account<'info, Mint>,
@@ -178,8 +174,11 @@ pub struct Liquidate<'info> {
     )]
     pub token_vault: Account<'info, TokenAccount>,
 
-    /// CHECK: Verified inside instruction via pool.oracle comparison
-    pub oracle: UncheckedAccount<'info>,
+    /// Our oracle PDA — verified against pool.oracle
+    #[account(
+        constraint = oracle.key() == pool.oracle @ ShieldFiError::OracleMismatch
+    )]
+    pub oracle: Account<'info, OraclePriceAccount>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
