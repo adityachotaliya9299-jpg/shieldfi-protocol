@@ -31,4 +31,19 @@ pub enum ShieldFiError {
 
     #[msg("Withdrawal amount exceeds deposited balance")]
     WithdrawExceedsDeposit,
+
+    #[msg("Oracle price is invalid or negative")]
+    InvalidOraclePrice,
+
+    #[msg("Oracle price feed is stale — too old to use")]
+    StaleOraclePrice,
+
+    #[msg("Oracle confidence interval too wide — possible manipulation")]
+    OracleConfidenceTooWide,
+
+    #[msg("Oracle account does not match pool's registered oracle")]
+    OracleMismatch,
+
+    #[msg("Liquidation repay amount exceeds max allowed for this position")]
+    LiquidationTooLarge,
 }
