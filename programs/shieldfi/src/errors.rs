@@ -20,7 +20,7 @@ pub enum ShieldFiError {
     #[msg("Unauthorized: caller is not the pool authority")]
     Unauthorized,
 
-    #[msg("Invalid config: collateral_factor must be < liquidation_threshold")]
+    #[msg("Invalid config: values out of safe range")]
     InvalidPoolConfig,
 
     #[msg("Arithmetic overflow detected")]
@@ -46,4 +46,10 @@ pub enum ShieldFiError {
 
     #[msg("Liquidation repay amount exceeds max allowed for this position")]
     LiquidationTooLarge,
+
+    #[msg("No pending authority nominated for this pool")]
+    NoPendingAuthority,
+
+    #[msg("Caller is not the nominated pending authority")]
+    NotPendingAuthority,
 }
