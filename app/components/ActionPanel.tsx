@@ -72,10 +72,7 @@ export function ActionPanel({
         ))}
       </div>
 
-      {/* Description */}
-      <p className="text-xs text-gray-500 mb-4">
-        {descriptions[activeTab]}
-      </p>
+      <p className="text-xs text-gray-500 mb-4">{descriptions[activeTab]}</p>
 
       {/* Amount Input */}
       <div className="relative mb-4">
@@ -85,8 +82,8 @@ export function ActionPanel({
           onChange={(e) => setAmount(e.target.value)}
           placeholder="0.00"
           min="0"
-          className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 
-                     text-white placeholder-gray-600 text-lg focus:outline-none 
+          className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3
+                     text-white placeholder-gray-600 text-lg focus:outline-none
                      focus:border-blue-500 transition-colors pr-20"
         />
         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-medium">
@@ -100,7 +97,7 @@ export function ActionPanel({
           <button
             key={v}
             onClick={() => setAmount(v)}
-            className="flex-1 py-1 text-xs bg-gray-800 hover:bg-gray-700 
+            className="flex-1 py-1 text-xs bg-gray-800 hover:bg-gray-700
                        text-gray-400 rounded-lg transition-colors"
           >
             ${v}
@@ -113,11 +110,11 @@ export function ActionPanel({
         <button
           onClick={handleSubmit}
           disabled={txLoading || !amount}
-          className={`w-full py-3 rounded-xl font-semibold text-white transition-all
-            ${txLoading || !amount
+          className={`w-full py-3 rounded-xl font-semibold text-white transition-all ${
+            txLoading || !amount
               ? "bg-gray-700 cursor-not-allowed opacity-50"
               : activeTabInfo.color
-            }`}
+          }`}
         >
           {txLoading
             ? "Processing..."
@@ -126,7 +123,7 @@ export function ActionPanel({
       ) : (
         <button
           disabled
-          className="w-full py-3 rounded-xl font-semibold text-gray-500 
+          className="w-full py-3 rounded-xl font-semibold text-gray-500
                      bg-gray-800 cursor-not-allowed"
         >
           Connect Wallet to Continue
@@ -135,23 +132,23 @@ export function ActionPanel({
 
       {/* Error */}
       {error && (
-        <div className="mt-3 p-3 bg-red-900/30 border border-red-800 
+        <div className="mt-3 p-3 bg-red-900/30 border border-red-800
                         rounded-xl text-red-400 text-xs break-all">
-          ⚠️ {error}
+          &#9888; {error}
         </div>
       )}
 
       {/* Success */}
       {txSignature && (
         <div className="mt-3 p-3 bg-green-900/30 border border-green-800 rounded-xl">
-          <p className="text-green-400 text-xs mb-1">✅ Transaction confirmed!</p>
+          <p className="text-green-400 text-xs mb-1">&#10003; Transaction confirmed!</p>
           
             href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
             target="_blank"
             rel="noreferrer"
             className="text-blue-400 text-xs underline break-all"
           >
-            View on Solana Explorer →
+            View on Solana Explorer
           </a>
         </div>
       )}
