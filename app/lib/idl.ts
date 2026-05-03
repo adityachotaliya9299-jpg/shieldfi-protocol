@@ -1,0 +1,131 @@
+
+export const IDL = {
+  version: "0.1.0",
+  name: "shieldfi",
+  instructions: [
+    {
+      name: "initializePool",
+      accounts: [
+        { name: "authority", isMut: true, isSigner: true },
+        { name: "tokenMint", isMut: false, isSigner: false },
+        { name: "pool", isMut: true, isSigner: false },
+        { name: "tokenVault", isMut: true, isSigner: false },
+        { name: "tokenProgram", isMut: false, isSigner: false },
+        { name: "systemProgram", isMut: false, isSigner: false },
+        { name: "rent", isMut: false, isSigner: false },
+      ],
+      args: [{ name: "config", type: { defined: "PoolConfig" } }],
+    },
+    {
+      name: "deposit",
+      accounts: [
+        { name: "user", isMut: true, isSigner: true },
+        { name: "tokenMint", isMut: false, isSigner: false },
+        { name: "pool", isMut: true, isSigner: false },
+        { name: "userPosition", isMut: true, isSigner: false },
+        { name: "userTokenAccount", isMut: true, isSigner: false },
+        { name: "tokenVault", isMut: true, isSigner: false },
+        { name: "tokenProgram", isMut: false, isSigner: false },
+        { name: "systemProgram", isMut: false, isSigner: false },
+        { name: "rent", isMut: false, isSigner: false },
+      ],
+      args: [{ name: "amount", type: "u64" }],
+    },
+    {
+      name: "withdraw",
+      accounts: [
+        { name: "user", isMut: true, isSigner: true },
+        { name: "tokenMint", isMut: false, isSigner: false },
+        { name: "pool", isMut: true, isSigner: false },
+        { name: "userPosition", isMut: true, isSigner: false },
+        { name: "userTokenAccount", isMut: true, isSigner: false },
+        { name: "tokenVault", isMut: true, isSigner: false },
+        { name: "tokenProgram", isMut: false, isSigner: false },
+        { name: "systemProgram", isMut: false, isSigner: false },
+      ],
+      args: [{ name: "amount", type: "u64" }],
+    },
+    {
+      name: "borrow",
+      accounts: [
+        { name: "user", isMut: true, isSigner: true },
+        { name: "tokenMint", isMut: false, isSigner: false },
+        { name: "pool", isMut: true, isSigner: false },
+        { name: "userPosition", isMut: true, isSigner: false },
+        { name: "userTokenAccount", isMut: true, isSigner: false },
+        { name: "tokenVault", isMut: true, isSigner: false },
+        { name: "tokenProgram", isMut: false, isSigner: false },
+        { name: "systemProgram", isMut: false, isSigner: false },
+      ],
+      args: [{ name: "amount", type: "u64" }],
+    },
+    {
+      name: "repay",
+      accounts: [
+        { name: "user", isMut: true, isSigner: true },
+        { name: "tokenMint", isMut: false, isSigner: false },
+        { name: "pool", isMut: true, isSigner: false },
+        { name: "userPosition", isMut: true, isSigner: false },
+        { name: "userTokenAccount", isMut: true, isSigner: false },
+        { name: "tokenVault", isMut: true, isSigner: false },
+        { name: "tokenProgram", isMut: false, isSigner: false },
+        { name: "systemProgram", isMut: false, isSigner: false },
+      ],
+      args: [{ name: "amount", type: "u64" }],
+    },
+  ],
+  accounts: [
+    {
+      name: "LendingPool",
+      type: {
+        kind: "struct",
+        fields: [
+          { name: "authority", type: "publicKey" },
+          { name: "pendingAuthority", type: "publicKey" },
+          { name: "tokenMint", type: "publicKey" },
+          { name: "tokenVault", type: "publicKey" },
+          { name: "oracle", type: "publicKey" },
+          { name: "totalDeposits", type: "u64" },
+          { name: "totalBorrows", type: "u64" },
+          { name: "reserveFactor", type: "u64" },
+          { name: "collateralFactor", type: "u64" },
+          { name: "liquidationThreshold", type: "u64" },
+          { name: "liquidationBonus", type: "u64" },
+          { name: "isPaused", type: "bool" },
+          { name: "bump", type: "u8" },
+        ],
+      },
+    },
+    {
+      name: "UserPosition",
+      type: {
+        kind: "struct",
+        fields: [
+          { name: "owner", type: "publicKey" },
+          { name: "pool", type: "publicKey" },
+          { name: "depositedAmount", type: "u64" },
+          { name: "borrowedAmount", type: "u64" },
+          { name: "lastUpdateSlot", type: "u64" },
+          { name: "accruedInterest", type: "u64" },
+          { name: "bump", type: "u8" },
+        ],
+      },
+    },
+  ],
+  types: [
+    {
+      name: "PoolConfig",
+      type: {
+        kind: "struct",
+        fields: [
+          { name: "reserveFactor", type: "u64" },
+          { name: "collateralFactor", type: "u64" },
+          { name: "liquidationThreshold", type: "u64" },
+          { name: "liquidationBonus", type: "u64" },
+          { name: "oracle", type: "publicKey" },
+        ],
+      },
+    },
+  ],
+  errors: [],
+} as const;
