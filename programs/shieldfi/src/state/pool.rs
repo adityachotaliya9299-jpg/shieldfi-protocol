@@ -1,29 +1,30 @@
 use anchor_lang::prelude::*;
 
-/// Core lending pool — one pool per supported token
 #[account]
 pub struct LendingPool {
-    /// Protocol authority (admin)
+    /// Current protocol authority (admin)
     pub authority: Pubkey,
-    /// SPL token this pool accepts (e.g. USDC)
+    /// Nominated next authority — must accept to take effect
+    pub pending_authority: Pubkey,
+    /// SPL token this pool accepts
     pub token_mint: Pubkey,
-    /// Vault that holds the deposited tokens
+    /// Vault holding deposited tokens
     pub token_vault: Pubkey,
-    /// Pyth price feed account for this token
+    /// Pyth price feed for this token
     pub oracle: Pubkey,
-    /// Total tokens deposited into pool
+    /// Total tokens deposited
     pub total_deposits: u64,
     /// Total tokens currently borrowed
     pub total_borrows: u64,
-    /// % of interest kept as protocol reserve (basis points)
+    /// Protocol reserve cut (basis points)
     pub reserve_factor: u64,
-    /// Max loan-to-value ratio (basis points, e.g. 7500 = 75%)
+    /// Max LTV ratio (basis points)
     pub collateral_factor: u64,
-    /// Health factor threshold to trigger liquidation (basis points)
+    /// Threshold below which liquidation is allowed (basis points)
     pub liquidation_threshold: u64,
-    /// Bonus paid to liquidators (basis points, e.g. 500 = 5%)
+    /// Bonus rewarded to liquidators (basis points)
     pub liquidation_bonus: u64,
-    /// Emergency pause — blocks all ops when true
+    /// Emergency pause flag
     pub is_paused: bool,
     /// PDA bump
     pub bump: u8,
@@ -32,9 +33,10 @@ pub struct LendingPool {
 impl LendingPool {
     pub const LEN: usize = 8   // discriminator
         + 32   // authority
+        + 32   // pending_authority  ← NEW
         + 32   // token_mint
         + 32   // token_vault
-        + 32   // oracle  ← NEW
+        + 32   // oracle
         + 8    // total_deposits
         + 8    // total_borrows
         + 8    // reserve_factor
