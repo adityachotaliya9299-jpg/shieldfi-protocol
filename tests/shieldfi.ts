@@ -5,12 +5,14 @@ import {
   PublicKey,
   SystemProgram,
   SYSVAR_RENT_PUBKEY,
+  Transaction,
+  SystemProgram as SP,
+  LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import {
   createMint,
   createAccount,
   mintTo,
-  getAccount,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 import { assert } from "chai";
@@ -180,21 +182,45 @@ describe("ShieldFi Protocol", () => {
     oracle: ORACLE,
   };
 
+  // Transfer SOL from authority to a new keypair (avoids devnet airdrop rate limit)
+  async function fundKeypair(kp: Keypair, lamports: number) {
+    const tx = new Transaction().add(
+      SP.transfer({
+        fromPubkey: authority.publicKey,
+        toPubkey: kp.publicKey,
+        lamports,
+      })
+    );
+    await provider.sendAndConfirm(tx);
+  }
+
   before(async () => {
     console.log("\n  Setting up...");
-    mint = await createMint(connection, authority.payer, authority.publicKey, null, D);
+
+    mint = await createMint(
+      connection, authority.payer, authority.publicKey, null, D
+    );
     [pool] = poolPDA(mint);
     [vault] = vaultPDA(mint);
 
-    authATA = await createAccount(connection, authority.payer, mint, authority.publicKey);
-    await mintTo(connection, authority.payer, mint, authATA, authority.payer, 1000 * 10**D);
+    authATA = await createAccount(
+      connection, authority.payer, mint, authority.publicKey
+    );
+    await mintTo(
+      connection, authority.payer, mint,
+      authATA, authority.payer, 1000 * 10**D
+    );
 
     user = Keypair.generate();
-    const sig = await connection.requestAirdrop(user.publicKey, 2_000_000_000);
-    await connection.confirmTransaction(sig);
+
+    // Fund user from authority wallet instead of airdrop
+    await fundKeypair(user, 0.5 * LAMPORTS_PER_SOL);
 
     userATA = await createAccount(connection, user, mint, user.publicKey);
-    await mintTo(connection, authority.payer, mint, userATA, authority.payer, 500 * 10**D);
+    await mintTo(
+      connection, authority.payer, mint,
+      userATA, authority.payer, 500 * 10**D
+    );
 
     [userPos] = positionPDA(pool, user.publicKey);
     console.log("  Ready.\n");
@@ -247,7 +273,6 @@ describe("ShieldFi Protocol", () => {
   });
 
   it("4. borrows within limit", async () => {
-    // Add admin liquidity first
     await (program.methods as any).deposit(new BN(100 * 10**D)).accounts({
       user: authority.publicKey, tokenMint: mint,
       pool, userTokenAccount: authATA,
@@ -358,8 +383,7 @@ describe("ShieldFi Protocol", () => {
 
   it("10. two-step authority transfer", async () => {
     const newAuth = Keypair.generate();
-    const sig = await connection.requestAirdrop(newAuth.publicKey, 1_000_000_000);
-    await connection.confirmTransaction(sig);
+    await fundKeypair(newAuth, 0.3 * LAMPORTS_PER_SOL);
 
     await (program.methods as any).nominateAuthority(newAuth.publicKey)
       .accounts({ authority: authority.publicKey, tokenMint: mint, pool }).rpc();
@@ -375,19 +399,20 @@ describe("ShieldFi Protocol", () => {
     const transferred = await (program.account as any).lendingPool.fetch(pool);
     assert.ok(transferred.authority.equals(newAuth.publicKey));
 
-    // Transfer back
+    // Transfer back to original
     await (program.methods as any).nominateAuthority(authority.publicKey)
       .accounts({ authority: newAuth.publicKey, tokenMint: mint, pool })
       .signers([newAuth]).rpc();
     await (program.methods as any).acceptAuthority()
-      .accounts({ newAuthority: authority.publicKey, tokenMint: mint, pool }).rpc();
+      .accounts({ newAuthority: authority.publicKey, tokenMint: mint, pool })
+      .rpc();
 
     console.log("  ✅ Two-step authority transfer works");
   });
 
   after(() => {
-    console.log("\n  ══════════════════════════");
-    console.log("  All 10 tests passed! 🏆");
-    console.log("  ══════════════════════════");
+    console.log("\n  ══════════════════════════════════");
+    console.log("  All 10 ShieldFi tests complete! 🏆");
+    console.log("  ══════════════════════════════════");
   });
 });
