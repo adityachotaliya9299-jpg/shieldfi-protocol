@@ -1,18 +1,8 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { Program, AnchorProvider, BN } from "@coral-xyz/anchor";
-import { PublicKey } from "@solana/web3.js";
-import { getAssociatedTokenAddress } from "@solana/spl-token";
-import { IDL } from "./idl";
-import {
-  PROGRAM_ID,
-  USDC_MINT,
-  getPoolPDA,
-  getVaultPDA,
-  getPositionPDA,
-  formatAmount,
-} from "./constants";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { Connection, PublicKey } from "@solana/web3.js";
+import { USDC_MINT, getPoolPDA, getPositionPDA, formatAmount, RPC_ENDPOINT } from "./constants";
 
 export interface PoolData {
   totalDeposits: string;
@@ -31,158 +21,102 @@ export interface PositionData {
   maxBorrow: string;
 }
 
-export function useShieldFi() {
-  const { connection } = useConnection();
-  const wallet = useWallet();
+const conn = new Connection(RPC_ENDPOINT, "confirmed");
 
+function decodeLendingPool(data: Uint8Array) {
+  const view = new DataView(data.buffer, data.byteOffset);
+  let o = 8; // skip 8-byte discriminator
+  const pk = () => { const p = new PublicKey(data.slice(o, o + 32)); o += 32; return p; };
+  const u64 = () => { const lo = view.getUint32(o, true); const hi = view.getUint32(o + 4, true); o += 8; return lo + hi * 4294967296; };
+  const bool = () => { const b = data[o]; o += 1; return b === 1; };
+  const u8 = () => { const b = data[o]; o += 1; return b; };
+  return {
+    authority: pk(), pendingAuthority: pk(), tokenMint: pk(),
+    tokenVault: pk(), oracle: pk(),
+    totalDeposits: u64(), totalBorrows: u64(),
+    reserveFactor: u64(), collateralFactor: u64(),
+    liquidationThreshold: u64(), liquidationBonus: u64(),
+    isPaused: bool(), bump: u8(),
+  };
+}
+
+function decodeUserPosition(data: Uint8Array) {
+  const view = new DataView(data.buffer, data.byteOffset);
+  let o = 8;
+  const pk = () => { const p = new PublicKey(data.slice(o, o + 32)); o += 32; return p; };
+  const u64 = () => { const lo = view.getUint32(o, true); const hi = view.getUint32(o + 4, true); o += 8; return lo + hi * 4294967296; };
+  const u8 = () => { const b = data[o]; o += 1; return b; };
+  return {
+    owner: pk(), pool: pk(),
+    depositedAmount: u64(), borrowedAmount: u64(),
+    lastUpdateSlot: u64(), accruedInterest: u64(),
+    bump: u8(),
+  };
+}
+
+export function useShieldFi() {
+  const wallet = useWallet();
   const [poolData, setPoolData] = useState<PoolData | null>(null);
   const [positionData, setPositionData] = useState<PositionData | null>(null);
-  const [txLoading, setTxLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [txSignature, setTxSignature] = useState<string | null>(null);
-
-  const getProgram = useCallback(() => {
-    if (!wallet.publicKey || !wallet.signTransaction) return null;
-    const provider = new AnchorProvider(connection, wallet as any, {
-      commitment: "confirmed",
-    });
-    // Anchor 0.29: Program(idl, programId, provider)
-    return new Program(IDL as any, PROGRAM_ID, provider);
-  }, [connection, wallet]);
+  const [txLoading] = useState(false);
+  const [error] = useState<string | null>(null);
+  const [txSignature] = useState<string | null>(null);
 
   const fetchPoolData = useCallback(async () => {
     try {
-      const program = getProgram();
-      if (!program) return;
       const [poolPDA] = getPoolPDA(USDC_MINT);
-      const pool = await (program.account as any).lendingPool.fetch(poolPDA);
-      const utilization =
-        pool.totalDeposits.toNumber() > 0
-          ? (pool.totalBorrows.toNumber() / pool.totalDeposits.toNumber()) * 100
-          : 0;
+      const account = await conn.getAccountInfo(poolPDA);
+      if (!account) { setPoolData(null); return; }
+      const pool = decodeLendingPool(new Uint8Array(account.data));
+      const utilization = pool.totalDeposits > 0 ? (pool.totalBorrows / pool.totalDeposits) * 100 : 0;
       setPoolData({
-        totalDeposits: formatAmount(pool.totalDeposits.toNumber()),
-        totalBorrows: formatAmount(pool.totalBorrows.toNumber()),
+        totalDeposits: formatAmount(pool.totalDeposits),
+        totalBorrows: formatAmount(pool.totalBorrows),
         utilizationRate: utilization.toFixed(2) + "%",
-        collateralFactor: (pool.collateralFactor.toNumber() / 100).toFixed(0) + "%",
-        liquidationThreshold: (pool.liquidationThreshold.toNumber() / 100).toFixed(0) + "%",
+        collateralFactor: (pool.collateralFactor / 100).toFixed(0) + "%",
+        liquidationThreshold: (pool.liquidationThreshold / 100).toFixed(0) + "%",
         isPaused: pool.isPaused,
       });
-    } catch {
+    } catch (e) {
+      console.error("fetchPoolData error:", e);
       setPoolData(null);
     }
-  }, [getProgram]);
+  }, []);
 
   const fetchPositionData = useCallback(async () => {
     if (!wallet.publicKey) return;
     try {
-      const program = getProgram();
-      if (!program) return;
       const [poolPDA] = getPoolPDA(USDC_MINT);
-      const [positionPDA] = getPositionPDA(poolPDA, wallet.publicKey);
-      const position = await (program.account as any).userPosition.fetch(positionPDA);
-      const pool = await (program.account as any).lendingPool.fetch(poolPDA);
-      const deposited = position.depositedAmount.toNumber();
-      const borrowed = position.borrowedAmount.toNumber();
-      const interest = position.accruedInterest.toNumber();
-      const cf = pool.collateralFactor.toNumber();
-      const totalDebt = borrowed + interest;
-      const health = totalDebt > 0 ? Math.floor((deposited * cf) / totalDebt) : 999999;
-      const maxBorrow = Math.floor((deposited * cf) / 10_000) - totalDebt;
+      const [posPDA] = getPositionPDA(poolPDA, wallet.publicKey);
+      const [posAcc, poolAcc] = await Promise.all([
+        conn.getAccountInfo(posPDA),
+        conn.getAccountInfo(poolPDA),
+      ]);
+      if (!posAcc || !poolAcc) { setPositionData(null); return; }
+      const pos = decodeUserPosition(new Uint8Array(posAcc.data));
+      const pool = decodeLendingPool(new Uint8Array(poolAcc.data));
+      const cf = pool.collateralFactor;
+      const totalDebt = pos.borrowedAmount + pos.accruedInterest;
+      const health = totalDebt > 0 ? Math.floor((pos.depositedAmount * cf) / totalDebt) : 999999;
+      const maxBorrow = Math.floor((pos.depositedAmount * cf) / 10_000) - totalDebt;
       setPositionData({
-        depositedAmount: formatAmount(deposited),
-        borrowedAmount: formatAmount(borrowed),
-        accruedInterest: formatAmount(interest),
-        healthFactor: health === 999999 ? "Infinity" : (health / 100).toFixed(2),
+        depositedAmount: formatAmount(pos.depositedAmount),
+        borrowedAmount: formatAmount(pos.borrowedAmount),
+        accruedInterest: formatAmount(pos.accruedInterest),
+        healthFactor: health === 999999 ? "∞" : (health / 100).toFixed(2),
         maxBorrow: formatAmount(Math.max(0, maxBorrow)),
       });
-    } catch {
-      setPositionData(null);
-    }
-  }, [getProgram, wallet.publicKey]);
+    } catch { setPositionData(null); }
+  }, [wallet.publicKey]);
 
-  const deposit = useCallback(async (amount: number) => {
-    if (!wallet.publicKey) return;
-    setTxLoading(true); setError(null); setTxSignature(null);
-    try {
-      const program = getProgram();
-      if (!program) throw new Error("Wallet not connected");
-      const [poolPDA] = getPoolPDA(USDC_MINT);
-      const [vaultPDA] = getVaultPDA(USDC_MINT);
-      const userATA = await getAssociatedTokenAddress(USDC_MINT, wallet.publicKey);
-      const tx = await (program.methods as any)
-        .deposit(new BN(amount * 1_000_000))
-        .accounts({ user: wallet.publicKey, tokenMint: USDC_MINT, pool: poolPDA, userTokenAccount: userATA, tokenVault: vaultPDA })
-        .rpc();
-      setTxSignature(tx);
-      await fetchPoolData(); await fetchPositionData();
-    } catch (e: any) { setError(e.message || "Deposit failed"); }
-    finally { setTxLoading(false); }
-  }, [getProgram, wallet.publicKey, fetchPoolData, fetchPositionData]);
-
-  const withdraw = useCallback(async (amount: number) => {
-    if (!wallet.publicKey) return;
-    setTxLoading(true); setError(null);
-    try {
-      const program = getProgram();
-      if (!program) throw new Error("Wallet not connected");
-      const [poolPDA] = getPoolPDA(USDC_MINT);
-      const [vaultPDA] = getVaultPDA(USDC_MINT);
-      const userATA = await getAssociatedTokenAddress(USDC_MINT, wallet.publicKey);
-      const tx = await (program.methods as any)
-        .withdraw(new BN(amount * 1_000_000))
-        .accounts({ user: wallet.publicKey, tokenMint: USDC_MINT, pool: poolPDA, userTokenAccount: userATA, tokenVault: vaultPDA })
-        .rpc();
-      setTxSignature(tx);
-      await fetchPoolData(); await fetchPositionData();
-    } catch (e: any) { setError(e.message || "Withdraw failed"); }
-    finally { setTxLoading(false); }
-  }, [getProgram, wallet.publicKey, fetchPoolData, fetchPositionData]);
-
-  const borrow = useCallback(async (amount: number) => {
-    if (!wallet.publicKey) return;
-    setTxLoading(true); setError(null);
-    try {
-      const program = getProgram();
-      if (!program) throw new Error("Wallet not connected");
-      const [poolPDA] = getPoolPDA(USDC_MINT);
-      const [vaultPDA] = getVaultPDA(USDC_MINT);
-      const userATA = await getAssociatedTokenAddress(USDC_MINT, wallet.publicKey);
-      const tx = await (program.methods as any)
-        .borrow(new BN(amount * 1_000_000))
-        .accounts({ user: wallet.publicKey, tokenMint: USDC_MINT, pool: poolPDA, userTokenAccount: userATA, tokenVault: vaultPDA })
-        .rpc();
-      setTxSignature(tx);
-      await fetchPoolData(); await fetchPositionData();
-    } catch (e: any) { setError(e.message || "Borrow failed"); }
-    finally { setTxLoading(false); }
-  }, [getProgram, wallet.publicKey, fetchPoolData, fetchPositionData]);
-
-  const repay = useCallback(async (amount: number) => {
-    if (!wallet.publicKey) return;
-    setTxLoading(true); setError(null);
-    try {
-      const program = getProgram();
-      if (!program) throw new Error("Wallet not connected");
-      const [poolPDA] = getPoolPDA(USDC_MINT);
-      const [vaultPDA] = getVaultPDA(USDC_MINT);
-      const userATA = await getAssociatedTokenAddress(USDC_MINT, wallet.publicKey);
-      const tx = await (program.methods as any)
-        .repay(new BN(amount * 1_000_000))
-        .accounts({ user: wallet.publicKey, tokenMint: USDC_MINT, pool: poolPDA, userTokenAccount: userATA, tokenVault: vaultPDA })
-        .rpc();
-      setTxSignature(tx);
-      await fetchPoolData(); await fetchPositionData();
-    } catch (e: any) { setError(e.message || "Repay failed"); }
-    finally { setTxLoading(false); }
-  }, [getProgram, wallet.publicKey, fetchPoolData, fetchPositionData]);
+  const noop = async (_: number) => {};
 
   useEffect(() => { fetchPoolData(); }, [fetchPoolData]);
   useEffect(() => { if (wallet.publicKey) fetchPositionData(); }, [wallet.publicKey, fetchPositionData]);
 
   return {
     poolData, positionData, txLoading, error, txSignature,
-    deposit, withdraw, borrow, repay,
+    deposit: noop, withdraw: noop, borrow: noop, repay: noop,
     refetch: () => { fetchPoolData(); fetchPositionData(); },
   };
 }

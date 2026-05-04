@@ -3,10 +3,10 @@ seeds = false
 skip-lint = false
 
 [programs.devnet]
-shieldfi = "GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"
+shieldfi = "3BA8RfgSqUrDynoUPFW2YLNzw9KHH1ErRTTTWNbdBoHM"
 
 [programs.localnet]
-shieldfi = "GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"
+shieldfi = "3BA8RfgSqUrDynoUPFW2YLNzw9KHH1ErRTTTWNbdBoHM"
 
 [registry]
 url = "https://api.apr.dev"

@@ -7,7 +7,7 @@ pub mod state;
 use instructions::*;
 use state::PoolConfig;
 
-declare_id!("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun");
+declare_id!("3BA8RfgSqUrDynoUPFW2YLNzw9KHH1ErRTTTWNbdBoHM");
 
 #[program]
 pub mod shieldfi {
