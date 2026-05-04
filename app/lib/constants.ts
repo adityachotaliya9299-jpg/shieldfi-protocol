@@ -2,7 +2,7 @@ import { PublicKey } from "@solana/web3.js";
 
 // Your deployed program ID (replace after anchor deploy)
 export const PROGRAM_ID = new PublicKey(
-  "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+  "GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"
 );
 
 // Devnet USDC mint (Circle's devnet USDC)

@@ -1,0 +1,22 @@
+{
+  "name": "shieldfi-protocol",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:adityachotaliya9299-jpg/shieldfi-protocol.git",
+  "author": "Aditya <adityachotaliya9299@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@coral-xyz/anchor": "0.29.0",
+    "@solana/spl-token": "0.3.8",
+    "@solana/web3.js": "1.87.6",
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^25.6.0",
+    "chai": "^6.2.2",
+    "mocha": "^11.7.5",
+    "rpc-websockets": "7.5.1",
+    "ts-mocha": "^11.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}

@@ -2,14 +2,17 @@
 seeds = false
 skip-lint = false
 
+[programs.devnet]
+shieldfi = "GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"
+
 [programs.localnet]
-shieldfi = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+shieldfi = "GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "Devnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

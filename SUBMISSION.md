@@ -21,7 +21,7 @@ emergency controls at every step.
 
 - GitHub: https://github.com/adityachotaliya9299-jpg/shieldfi-protocol
 - Frontend: [your-vercel-url-here]
-- Program ID (devnet): [your-deployed-program-id]
+- Program ID (devnet): GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun
 
 ---
 
@@ -151,4 +151,4 @@ cd app && npm run dev
 
 Network: Solana Devnet
 Program ID: [paste your deployed ID here after anchor deploy]
-Explorer: https://explorer.solana.com/address/[PROGRAM_ID]?cluster=devnet
+Explorer: https://explorer.solana.com/address/GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun?cluster=devnet
