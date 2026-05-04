@@ -56,3 +56,36 @@ is gated by multiple layers of validation before any state changes occur.
 
 ## Responsible Disclosure
 If you discover a vulnerability, please contact: security@shieldfi.xyz
+
+## Rate-Limited Withdrawals and Borrows
+
+### What it does
+ShieldFi enforces a per-slot rate limit on how much liquidity can leave
+the pool in a single Solana slot (~400ms).
+
+### How it works
+- `withdrawal_limit_bps` — set at pool initialization (e.g. 1000 = 10% per slot)
+- Every withdraw and borrow is checked against the remaining capacity for the current slot
+- If the slot changes, the counter resets — fresh capacity each slot
+- The limit applies to BOTH withdrawals and borrows (they share one counter)
+
+### Why this matters
+In a typical DeFi exploit, an attacker drains the pool in a single atomic
+transaction or a rapid burst of transactions in one block.
+
+With a 10% per slot rate limit on a $1,000,000 pool:
+- Maximum drained in 1 slot: $100,000
+- An attacker needs 10+ slots (~4 seconds) to fully drain
+- This gives the admin time to call pause_protocol and halt the exploit
+- The circuit breaker + rate limit work together as a defense-in-depth system
+
+### Configuration
+- Minimum: 100 bps (1% per slot) — very restrictive
+- Maximum: 5000 bps (50% per slot) — more permissive for large pools
+- Recommended: 1000 bps (10% per slot) for most pools
+
+### On-chain verification
+The rate limit state is fully on-chain and auditable:
+- `pool.withdrawal_limit_bps` — the configured limit
+- `pool.rate_limit_slot` — slot of last withdrawal/borrow
+- `pool.withdrawn_this_slot` — amount extracted in current slot
