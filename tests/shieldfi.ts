@@ -11,11 +11,10 @@ import {
   createAccount,
   mintTo,
   getAccount,
-  TOKEN_PROGRAM_ID,
+  TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
 } from "@solana/spl-token";
 import { assert } from "chai";
 
-const PROGRAM_ID = new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun");
 
 // Minimal IDL with address embedded — Anchor 0.29 requirement
 const IDL = {
@@ -200,21 +199,21 @@ const IDL = {
 function getPoolPDA(tokenMint: PublicKey) {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("pool"), tokenMint.toBuffer()],
-    PROGRAM_ID
+    new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun")
   );
 }
 
 function getVaultPDA(tokenMint: PublicKey) {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("vault"), tokenMint.toBuffer()],
-    PROGRAM_ID
+    new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun")
   );
 }
 
 function getPositionPDA(pool: PublicKey, user: PublicKey) {
   return PublicKey.findProgramAddressSync(
     [Buffer.from("position"), pool.toBuffer(), user.toBuffer()],
-    PROGRAM_ID
+    new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun")
   );
 }
 
@@ -223,7 +222,7 @@ function getPositionPDA(pool: PublicKey, user: PublicKey) {
 describe("ShieldFi Protocol", () => {
   const provider = AnchorProvider.env();
   anchor.setProvider(provider);
-  const program = new anchor.Program(IDL as any, PROGRAM_ID, provider);
+  const program = new anchor.Program(IDL as any, "GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun", provider);
   const connection = provider.connection;
   const authority = provider.wallet as anchor.Wallet;
 
@@ -285,7 +284,7 @@ describe("ShieldFi Protocol", () => {
       .accounts({
         authority: authority.publicKey, tokenMint,
         pool: poolPDA, tokenVault: vaultPDA,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
         systemProgram: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
       }).rpc();
@@ -304,7 +303,7 @@ describe("ShieldFi Protocol", () => {
         user: userKeypair.publicKey, tokenMint,
         pool: poolPDA, userTokenAccount,
         tokenVault: vaultPDA,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
         systemProgram: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
       }).signers([userKeypair]).rpc();
@@ -321,7 +320,7 @@ describe("ShieldFi Protocol", () => {
           user: userKeypair.publicKey, tokenMint,
           pool: poolPDA, userTokenAccount,
           tokenVault: vaultPDA,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
           systemProgram: SystemProgram.programId,
           rent: SYSVAR_RENT_PUBKEY,
         }).signers([userKeypair]).rpc();
@@ -338,7 +337,7 @@ describe("ShieldFi Protocol", () => {
         user: authority.publicKey, tokenMint,
         pool: poolPDA, userTokenAccount: authorityTokenAccount,
         tokenVault: vaultPDA,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
         systemProgram: SystemProgram.programId,
         rent: SYSVAR_RENT_PUBKEY,
       }).rpc();
@@ -349,7 +348,7 @@ describe("ShieldFi Protocol", () => {
         user: userKeypair.publicKey, tokenMint,
         pool: poolPDA, userTokenAccount,
         tokenVault: vaultPDA,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
         systemProgram: SystemProgram.programId,
       }).signers([userKeypair]).rpc();
 
@@ -365,7 +364,7 @@ describe("ShieldFi Protocol", () => {
           user: userKeypair.publicKey, tokenMint,
           pool: poolPDA, userTokenAccount,
           tokenVault: vaultPDA,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
           systemProgram: SystemProgram.programId,
         }).signers([userKeypair]).rpc();
       assert.fail("Should throw InsufficientCollateral");
@@ -383,7 +382,7 @@ describe("ShieldFi Protocol", () => {
         user: userKeypair.publicKey, tokenMint,
         pool: poolPDA, userTokenAccount,
         tokenVault: vaultPDA,
-        tokenProgram: TOKEN_PROGRAM_ID,
+        tokenProgram: TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
         systemProgram: SystemProgram.programId,
       }).signers([userKeypair]).rpc();
 
@@ -408,7 +407,7 @@ describe("ShieldFi Protocol", () => {
           user: userKeypair.publicKey, tokenMint,
           pool: poolPDA, userTokenAccount,
           tokenVault: vaultPDA,
-          tokenProgram: TOKEN_PROGRAM_ID,
+          tokenProgram: TOKEN_new PublicKey("GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun"),
           systemProgram: SystemProgram.programId,
           rent: SYSVAR_RENT_PUBKEY,
         }).signers([userKeypair]).rpc();
