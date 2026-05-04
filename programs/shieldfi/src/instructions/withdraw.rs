@@ -8,20 +8,24 @@ pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
     require!(amount > 0, ShieldFiError::ZeroAmount);
     require!(!ctx.accounts.pool.is_paused, ShieldFiError::ProtocolPaused);
 
-    let position = &ctx.accounts.user_position;
+    let current_slot = Clock::get()?.slot;
     let pool = &ctx.accounts.pool;
+    let position = &ctx.accounts.user_position;
 
-    // Can't withdraw more than deposited
+    // ── Rate Limit Check ──────────────────────────────────────────────
+    // Prevents draining pool in one block during an exploit
+    let capacity = pool.remaining_withdrawal_capacity(current_slot);
+    require!(
+        amount <= capacity,
+        ShieldFiError::WithdrawalRateLimitExceeded
+    );
+    // ─────────────────────────────────────────────────────────────────
+
+    // Health factor check after withdrawal
     require!(
         position.deposited_amount >= amount,
         ShieldFiError::WithdrawExceedsDeposit
     );
-
-    // Simulate withdrawal and check health factor stays safe
-    let new_deposited = position
-        .deposited_amount
-        .checked_sub(amount)
-        .ok_or(ShieldFiError::MathOverflow)?;
 
     let total_debt = position
         .borrowed_amount
@@ -29,6 +33,11 @@ pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         .ok_or(ShieldFiError::MathOverflow)?;
 
     if total_debt > 0 {
+        let new_deposited = position
+            .deposited_amount
+            .checked_sub(amount)
+            .ok_or(ShieldFiError::MathOverflow)?;
+
         let health_after = new_deposited
             .checked_mul(pool.collateral_factor)
             .ok_or(ShieldFiError::MathOverflow)?
@@ -38,7 +47,7 @@ pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         require!(health_after >= 10_000, ShieldFiError::InsufficientCollateral);
     }
 
-    // Check pool has enough liquidity
+    // Pool liquidity check
     require!(
         pool.available_liquidity() >= amount,
         ShieldFiError::InsufficientLiquidity
@@ -46,11 +55,7 @@ pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
 
     // Sign with pool PDA for vault transfer
     let token_mint_key = ctx.accounts.token_mint.key();
-    let seeds = &[
-        b"pool",
-        token_mint_key.as_ref(),
-        &[pool.bump],
-    ];
+    let seeds = &[b"pool", token_mint_key.as_ref(), &[pool.bump]];
     let signer_seeds = &[&seeds[..]];
 
     let cpi_accounts = Transfer {
@@ -58,15 +63,30 @@ pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         to: ctx.accounts.user_token_account.to_account_info(),
         authority: ctx.accounts.pool.to_account_info(),
     };
-    let cpi_ctx = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        cpi_accounts,
-        signer_seeds,
-    );
-    token::transfer(cpi_ctx, amount)?;
+    token::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            signer_seeds,
+        ),
+        amount,
+    )?;
 
-    // Update state
+    // Update rate limit state
     let pool = &mut ctx.accounts.pool;
+    if current_slot > pool.rate_limit_slot {
+        // New slot — reset the counter
+        pool.rate_limit_slot = current_slot;
+        pool.withdrawn_this_slot = amount;
+    } else {
+        // Same slot — accumulate
+        pool.withdrawn_this_slot = pool
+            .withdrawn_this_slot
+            .checked_add(amount)
+            .ok_or(ShieldFiError::MathOverflow)?;
+    }
+
+    // Update pool and position state
     pool.total_deposits = pool
         .total_deposits
         .checked_sub(amount)
@@ -77,13 +97,13 @@ pub fn withdraw(ctx: Context<Withdraw>, amount: u64) -> Result<()> {
         .deposited_amount
         .checked_sub(amount)
         .ok_or(ShieldFiError::MathOverflow)?;
-    position.last_update_slot = Clock::get()?.slot;
+    position.last_update_slot = current_slot;
 
     msg!(
-        "Withdraw: {} tokens to {}. Remaining deposit: {}",
+        "Withdraw: {} tokens. Rate limit: {}/{} used this slot.",
         amount,
-        ctx.accounts.user.key(),
-        position.deposited_amount
+        ctx.accounts.pool.withdrawn_this_slot,
+        ctx.accounts.pool.max_withdrawal_this_slot()
     );
 
     Ok(())
