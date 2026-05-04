@@ -8,6 +8,9 @@
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "strict": false,
-    "skipLibCheck": true
-  }
+    "skipLibCheck": true,
+    "rootDir": ".",
+    "outDir": "./dist"
+  },
+  "include": ["tests/**/*.ts"]
 }
