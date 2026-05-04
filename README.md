@@ -36,7 +36,7 @@ ShieldFi is a DeFi lending protocol that lets users:
 | Phase 3: Liquidation + Pyth Oracle | ✅ Done |
 | Phase 4: Security features | ✅ Done |
 | Phase 5: Frontend | ✅ Done |
-| Phase 6: Tests + Docs | 🔄 Next |
+| Phase 6: Tests + Docs | ✅ Done |
 
 ## Local Setup
 
