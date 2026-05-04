@@ -52,4 +52,10 @@ pub enum ShieldFiError {
 
     #[msg("Caller is not the nominated pending authority")]
     NotPendingAuthority,
+
+    #[msg("Withdrawal exceeds rate limit — max X% of pool liquidity per slot to prevent exploit draining")]
+    WithdrawalRateLimitExceeded,
+
+    #[msg("Borrow exceeds rate limit — max X% of pool liquidity per slot")]
+    BorrowRateLimitExceeded,
 }
