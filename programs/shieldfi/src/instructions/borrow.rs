@@ -8,10 +8,18 @@ pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
     require!(amount > 0, ShieldFiError::ZeroAmount);
     require!(!ctx.accounts.pool.is_paused, ShieldFiError::ProtocolPaused);
 
+    let current_slot = Clock::get()?.slot;
     let position = &ctx.accounts.user_position;
     let pool = &ctx.accounts.pool;
 
-    // Max borrowable = deposited * collateral_factor / 10_000
+    // ── Rate Limit Check ──────────────────────────────────────────────
+    // Same rate limit applies to borrows — caps how much can be
+    // extracted from the pool per slot even via borrow path
+    let capacity = pool.remaining_withdrawal_capacity(current_slot);
+    require!(amount <= capacity, ShieldFiError::BorrowRateLimitExceeded);
+    // ─────────────────────────────────────────────────────────────────
+
+    // Collateral factor check
     let max_borrow = position
         .deposited_amount
         .checked_mul(pool.collateral_factor)
@@ -26,12 +34,8 @@ pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
         .checked_add(amount)
         .ok_or(ShieldFiError::MathOverflow)?;
 
-    require!(
-        new_total_borrow <= max_borrow,
-        ShieldFiError::InsufficientCollateral
-    );
+    require!(new_total_borrow <= max_borrow, ShieldFiError::InsufficientCollateral);
 
-    // Pool must have enough liquidity
     require!(
         pool.available_liquidity() >= amount,
         ShieldFiError::InsufficientLiquidity
@@ -39,11 +43,7 @@ pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
 
     // Sign with pool PDA
     let token_mint_key = ctx.accounts.token_mint.key();
-    let seeds = &[
-        b"pool",
-        token_mint_key.as_ref(),
-        &[pool.bump],
-    ];
+    let seeds = &[b"pool", token_mint_key.as_ref(), &[pool.bump]];
     let signer_seeds = &[&seeds[..]];
 
     let cpi_accounts = Transfer {
@@ -51,15 +51,27 @@ pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
         to: ctx.accounts.user_token_account.to_account_info(),
         authority: ctx.accounts.pool.to_account_info(),
     };
-    let cpi_ctx = CpiContext::new_with_signer(
-        ctx.accounts.token_program.to_account_info(),
-        cpi_accounts,
-        signer_seeds,
-    );
-    token::transfer(cpi_ctx, amount)?;
+    token::transfer(
+        CpiContext::new_with_signer(
+            ctx.accounts.token_program.to_account_info(),
+            cpi_accounts,
+            signer_seeds,
+        ),
+        amount,
+    )?;
 
-    // Update state
+    // Update rate limit state (shared with withdrawals)
     let pool = &mut ctx.accounts.pool;
+    if current_slot > pool.rate_limit_slot {
+        pool.rate_limit_slot = current_slot;
+        pool.withdrawn_this_slot = amount;
+    } else {
+        pool.withdrawn_this_slot = pool
+            .withdrawn_this_slot
+            .checked_add(amount)
+            .ok_or(ShieldFiError::MathOverflow)?;
+    }
+
     pool.total_borrows = pool
         .total_borrows
         .checked_add(amount)
@@ -70,13 +82,13 @@ pub fn borrow(ctx: Context<Borrow>, amount: u64) -> Result<()> {
         .borrowed_amount
         .checked_add(amount)
         .ok_or(ShieldFiError::MathOverflow)?;
-    position.last_update_slot = Clock::get()?.slot;
+    position.last_update_slot = current_slot;
 
     msg!(
-        "Borrow: {} tokens by {}. Total borrowed: {}",
+        "Borrow: {} tokens. Rate limit: {}/{} used this slot.",
         amount,
-        ctx.accounts.user.key(),
-        position.borrowed_amount
+        ctx.accounts.pool.withdrawn_this_slot,
+        ctx.accounts.pool.max_withdrawal_this_slot()
     );
 
     Ok(())
