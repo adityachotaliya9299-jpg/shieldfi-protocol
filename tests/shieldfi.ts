@@ -171,6 +171,7 @@ describe("ShieldFi Protocol", () => {
   let user: Keypair;
   let userATA: PublicKey;
   let userPos: PublicKey;
+  let authPos: PublicKey;
 
   const D = 6;
   const ORACLE = new PublicKey("11111111111111111111111111111111");
@@ -223,6 +224,7 @@ describe("ShieldFi Protocol", () => {
     );
 
     [userPos] = positionPDA(pool, user.publicKey);
+    [authPos] = positionPDA(pool, authority.publicKey);
     console.log("  Ready.\n");
   });
 
@@ -275,7 +277,7 @@ describe("ShieldFi Protocol", () => {
   it("4. borrows within limit", async () => {
     await (program.methods as any).deposit(new BN(100 * 10**D)).accounts({
       user: authority.publicKey, tokenMint: mint,
-      pool, userPosition: userPos, userTokenAccount: authATA,
+      pool, userPosition: authPos, userTokenAccount: authATA,
       tokenVault: vault,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
