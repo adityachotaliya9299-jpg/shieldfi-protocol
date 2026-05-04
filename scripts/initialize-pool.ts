@@ -6,8 +6,7 @@ import { createMint, getOrCreateAssociatedTokenAccount, mintTo, TOKEN_PROGRAM_ID
 const PROGRAM_ID = new PublicKey("3BA8RfgSqUrDynoUPFW2YLNzw9KHH1ErRTTTWNbdBoHM");
 
 const IDL = {
-  version: "0.1.0",
-  name: "shieldfi",
+  version: "0.1.0", name: "shieldfi",
   metadata: { address: "3BA8RfgSqUrDynoUPFW2YLNzw9KHH1ErRTTTWNbdBoHM" },
   instructions: [
     { name: "initializePool", accounts: [
@@ -44,6 +43,9 @@ const IDL = {
       { name: "collateralFactor", type: "u64" },
       { name: "liquidationThreshold", type: "u64" },
       { name: "liquidationBonus", type: "u64" },
+      { name: "withdrawalLimitBps", type: "u64" },
+      { name: "rateLimitSlot", type: "u64" },
+      { name: "withdrawnThisSlot", type: "u64" },
       { name: "isPaused", type: "bool" },
       { name: "bump", type: "u8" },
     ]}},
@@ -55,6 +57,7 @@ const IDL = {
       { name: "liquidationThreshold", type: "u64" },
       { name: "liquidationBonus", type: "u64" },
       { name: "oracle", type: "publicKey" },
+      { name: "withdrawalLimitBps", type: "u64" },
     ]}},
   ],
   errors: [],
@@ -68,11 +71,10 @@ async function main() {
   const program = new anchor.Program(IDL as any, PROGRAM_ID, provider);
 
   console.log("Authority:", wallet.publicKey.toBase58());
-  console.log("Program:", PROGRAM_ID.toBase58());
 
-  console.log("\n1. Creating demo USDC mint...");
+  console.log("\n1. Creating new token mint...");
   const tokenMint = await createMint(connection, wallet.payer, wallet.publicKey, null, 6);
-  console.log("   Token mint:", tokenMint.toBase58());
+  console.log("   Mint:", tokenMint.toBase58());
 
   const [poolPDA] = PublicKey.findProgramAddressSync(
     [Buffer.from("pool"), tokenMint.toBuffer()], PROGRAM_ID
@@ -84,9 +86,7 @@ async function main() {
     [Buffer.from("position"), poolPDA.toBuffer(), wallet.publicKey.toBuffer()], PROGRAM_ID
   );
 
-  console.log("   Pool PDA:", poolPDA.toBase58());
-
-  console.log("\n2. Initializing lending pool...");
+  console.log("\n2. Initializing pool with 10% rate limit...");
   const ORACLE = new PublicKey("11111111111111111111111111111111");
 
   await (program.methods as any).initializePool({
@@ -95,32 +95,26 @@ async function main() {
     liquidationThreshold: new BN(8000),
     liquidationBonus: new BN(500),
     oracle: ORACLE,
+    withdrawalLimitBps: new BN(1000), // 10% per slot max
   }).accounts({
-    authority: wallet.publicKey,
-    tokenMint,
-    pool: poolPDA,
-    tokenVault: vaultPDA,
+    authority: wallet.publicKey, tokenMint,
+    pool: poolPDA, tokenVault: vaultPDA,
     tokenProgram: TOKEN_PROGRAM_ID,
     systemProgram: SystemProgram.programId,
     rent: SYSVAR_RENT_PUBKEY,
   }).rpc();
 
-  console.log("   Pool initialized!");
+  console.log("   Pool initialized with rate limit!");
 
   console.log("\n3. Minting 10,000 demo USDC...");
-  const authATA = await getOrCreateAssociatedTokenAccount(
-    connection, wallet.payer, tokenMint, wallet.publicKey
-  );
+  const authATA = await getOrCreateAssociatedTokenAccount(connection, wallet.payer, tokenMint, wallet.publicKey);
   await mintTo(connection, wallet.payer, tokenMint, authATA.address, wallet.payer, 10_000 * 10**6);
 
   console.log("\n4. Seeding pool with 5,000 USDC...");
   await (program.methods as any).deposit(new BN(5_000 * 10**6)).accounts({
-    user: wallet.publicKey,
-    tokenMint,
-    pool: poolPDA,
-    userPosition: positionPDA,
-    userTokenAccount: authATA.address,
-    tokenVault: vaultPDA,
+    user: wallet.publicKey, tokenMint,
+    pool: poolPDA, userPosition: positionPDA,
+    userTokenAccount: authATA.address, tokenVault: vaultPDA,
     tokenProgram: TOKEN_PROGRAM_ID,
     systemProgram: SystemProgram.programId,
     rent: SYSVAR_RENT_PUBKEY,
@@ -128,15 +122,16 @@ async function main() {
 
   const pool = await (program.account as any).lendingPool.fetch(poolPDA);
 
-  console.log("\n✅ SUCCESS!");
+  console.log("\n✅ SUCCESS — Pool with Rate Limiting!");
   console.log("=====================================");
-  console.log("Token Mint:    ", tokenMint.toBase58());
-  console.log("Pool PDA:      ", poolPDA.toBase58());
-  console.log("Total Deposits:", pool.totalDeposits.toNumber() / 10**6, "USDC");
+  console.log("Token Mint:         ", tokenMint.toBase58());
+  console.log("Pool PDA:           ", poolPDA.toBase58());
+  console.log("Total Deposits:     ", pool.totalDeposits.toNumber() / 10**6, "USDC");
+  console.log("Withdrawal Limit:   ", pool.withdrawalLimitBps.toNumber() / 100, "% per slot");
+  console.log("Max/slot at $5000:  $", (pool.totalDeposits.toNumber() / 10**6) * (pool.withdrawalLimitBps.toNumber() / 10000));
   console.log("=====================================");
-  console.log("\n📋 COPY THESE TO app/lib/constants.ts:");
-  console.log(`PROGRAM_ID = "3BA8RfgSqUrDynoUPFW2YLNzw9KHH1ErRTTTWNbdBoHM"`);
-  console.log(`USDC_MINT  = "${tokenMint.toBase58()}"`);
+  console.log("\n📋 UPDATE app/lib/constants.ts:");
+  console.log(`USDC_MINT = "${tokenMint.toBase58()}"`);
 }
 
 main().catch(console.error);

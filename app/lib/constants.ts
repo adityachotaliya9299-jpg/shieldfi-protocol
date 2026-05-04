@@ -1,7 +1,7 @@
 import { PublicKey } from "@solana/web3.js";
 
 export const PROGRAM_ID = new PublicKey("3BA8RfgSqUrDynoUPFW2YLNzw9KHH1ErRTTTWNbdBoHM");
-export const USDC_MINT = new PublicKey("6vTFjey31dtiBSHd7vAjyebddkh4kaJqU7yrQU9EgAHC");
+export const USDC_MINT = new PublicKey("Ro1PcDc3kotejReC4srNda3QQrBuweXqMRzz9VpFyBD");
 export const RPC_ENDPOINT = "https://api.devnet.solana.com";
 
 export function getPoolPDA(tokenMint: PublicKey): [PublicKey, number] {
