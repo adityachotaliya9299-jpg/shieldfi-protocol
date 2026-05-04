@@ -21,7 +21,7 @@ export function Navbar() {
             <Link href="/" className="hover:text-white transition-colors">
               Dashboard
             </Link>
-            
+            <a
               href="https://github.com/adityachotaliya9299-jpg/shieldfi-protocol"
               target="_blank"
               rel="noreferrer"

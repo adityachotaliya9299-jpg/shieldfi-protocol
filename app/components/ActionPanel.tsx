@@ -142,7 +142,7 @@ export function ActionPanel({
       {txSignature && (
         <div className="mt-3 p-3 bg-green-900/30 border border-green-800 rounded-xl">
           <p className="text-green-400 text-xs mb-1">&#10003; Transaction confirmed!</p>
-          
+          <a
             href={`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`}
             target="_blank"
             rel="noreferrer"
