@@ -245,7 +245,7 @@ describe("ShieldFi Protocol", () => {
     const amt = new BN(100 * 10**D);
     await (program.methods as any).deposit(amt).accounts({
       user: user.publicKey, tokenMint: mint,
-      pool, userTokenAccount: userATA,
+      pool, userPosition: userPos, userTokenAccount: userATA,
       tokenVault: vault,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
@@ -261,7 +261,7 @@ describe("ShieldFi Protocol", () => {
     try {
       await (program.methods as any).deposit(new BN(0)).accounts({
         user: user.publicKey, tokenMint: mint,
-        pool, userTokenAccount: userATA,
+        pool, userPosition: userPos, userTokenAccount: userATA,
         tokenVault: vault,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -275,7 +275,7 @@ describe("ShieldFi Protocol", () => {
   it("4. borrows within limit", async () => {
     await (program.methods as any).deposit(new BN(100 * 10**D)).accounts({
       user: authority.publicKey, tokenMint: mint,
-      pool, userTokenAccount: authATA,
+      pool, userPosition: userPos, userTokenAccount: authATA,
       tokenVault: vault,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
@@ -285,7 +285,7 @@ describe("ShieldFi Protocol", () => {
     const borrow = new BN(50 * 10**D);
     await (program.methods as any).borrow(borrow).accounts({
       user: user.publicKey, tokenMint: mint,
-      pool, userTokenAccount: userATA,
+      pool, userPosition: userPos, userTokenAccount: userATA,
       tokenVault: vault,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
@@ -300,7 +300,7 @@ describe("ShieldFi Protocol", () => {
     try {
       await (program.methods as any).borrow(new BN(50 * 10**D)).accounts({
         user: user.publicKey, tokenMint: mint,
-        pool, userTokenAccount: userATA,
+        pool, userPosition: userPos, userTokenAccount: userATA,
         tokenVault: vault,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
@@ -316,7 +316,7 @@ describe("ShieldFi Protocol", () => {
 
     await (program.methods as any).repay(repay).accounts({
       user: user.publicKey, tokenMint: mint,
-      pool, userTokenAccount: userATA,
+      pool, userPosition: userPos, userTokenAccount: userATA,
       tokenVault: vault,
       tokenProgram: TOKEN_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
@@ -340,7 +340,7 @@ describe("ShieldFi Protocol", () => {
     try {
       await (program.methods as any).deposit(new BN(1_000_000)).accounts({
         user: user.publicKey, tokenMint: mint,
-        pool, userTokenAccount: userATA,
+        pool, userPosition: userPos, userTokenAccount: userATA,
         tokenVault: vault,
         tokenProgram: TOKEN_PROGRAM_ID,
         systemProgram: SystemProgram.programId,
