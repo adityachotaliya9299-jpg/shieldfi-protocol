@@ -152,3 +152,6 @@ cd app && npm run dev
 Network: Solana Devnet
 Program ID: [paste your deployed ID here after anchor deploy]
 Explorer: https://explorer.solana.com/address/GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun?cluster=devnet
+
+## Demo Video
+https://www.loom.com/share/98b937fd1ef0404988bdb0a1407d0dce
