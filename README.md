@@ -11,7 +11,10 @@
 **ShieldFi** is a security-first overcollateralized lending protocol on Solana — built for the **Solana Frontier Hackathon 2026**, targeting the **Adevar Labs $50,000 Security Audit Credits Bounty**.
 
 ---
+## Demo Video
+[Project Demo](https://www.loom.com/share/98b937fd1ef0404988bdb0a1407d0dce)
 
+---
 ## 📋 Table of Contents
 
 1. [Overview](#overview)
