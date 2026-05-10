@@ -229,7 +229,7 @@ export default function Home() {
 
         {/* CTAs */}
         <div style={{ display:"flex", gap:14, flexWrap:"wrap", justifyContent:"center", animation:"fadeUp 0.7s ease 0.7s forwards", opacity:0 }}>
-          <button onClick={scrollToDash} style={{
+          <button onClick={scrollToDash} id="launch-btn" style={{
             padding:"14px 36px", borderRadius:12, fontWeight:700, fontSize:15,
             cursor:"pointer", fontFamily:"'Space Grotesk', sans-serif",
             background:"linear-gradient(135deg, rgba(0,229,255,0.18), rgba(0,255,136,0.1))",
@@ -286,7 +286,7 @@ export default function Home() {
       </section>
 
       {/* ── DASHBOARD ── */}
-      <section ref={dashboardRef} style={{ position:"relative", zIndex:1, padding:"60px 24px 80px", maxWidth:1200, margin:"0 auto" }}>
+      <section ref={dashboardRef} id="dashboard" style={{ position:"relative", zIndex:1, padding:"60px 24px 80px", maxWidth:1200, margin:"0 auto" }}>
         <div style={{ textAlign:"center", marginBottom:36 }}>
           <div style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"5px 14px", borderRadius:99, marginBottom:12, background:"rgba(0,229,255,0.07)", border:"1px solid rgba(0,229,255,0.18)", fontSize:12, color:"#00e5ff", fontWeight:600 }}>
             <div style={{ width:6, height:6, borderRadius:"50%", background:"#00e5ff", animation:"pulse-dot 2s ease infinite" }} />
