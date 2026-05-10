@@ -27,7 +27,7 @@ const PID = PROGRAM_ID;
 
 // ── Anchor discriminators (sha256("global:name")[0:8]) ──────────
 async function disc(name: string): Promise<Buffer> {
-  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`global:${name}`));
+  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`global:${name}`) as unknown as ArrayBuffer);
   return Buffer.from(hash).slice(0, 8);
 }
 
