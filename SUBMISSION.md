@@ -20,7 +20,7 @@ emergency controls at every step.
 ## Live Links
 
 - GitHub: https://github.com/adityachotaliya9299-jpg/shieldfi-protocol
-- Frontend: [your-vercel-url-here]
+- Frontend: https://shieldfi-protocol.vercel.app/
 - Program ID (devnet): GVpapxSimmdpcsjgmfU3iWfxWBSz2o9JHc1o3UNq6Pun
 
 ---
