@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::Mint;
-
 use crate::errors::ShieldFiError;
 use crate::state::LendingPool;
 
@@ -11,21 +10,13 @@ pub fn pause_protocol(ctx: Context<PauseProtocol>) -> Result<()> {
         ctx.accounts.authority.key() == ctx.accounts.pool.authority,
         ShieldFiError::Unauthorized
     );
-
     let pool = &mut ctx.accounts.pool;
     pool.is_paused = true;
-
     msg!(
-    "ShieldFi CIRCUIT BREAKER FIRED: paused by {} at slot {}",
-    ctx.accounts.authority.key(),
-    Clock::get()?.slot
+        "ShieldFi CIRCUIT BREAKER FIRED: paused by {} at slot {}",
+        ctx.accounts.authority.key(),
+        Clock::get()?.slot
     );
-    
-    msg!(
-        "⚠️  ShieldFi pool PAUSED by authority: {}",
-        ctx.accounts.authority.key()
-    );
-
     Ok(())
 }
 
@@ -35,15 +26,13 @@ pub fn resume_protocol(ctx: Context<PauseProtocol>) -> Result<()> {
         ctx.accounts.authority.key() == ctx.accounts.pool.authority,
         ShieldFiError::Unauthorized
     );
-
     let pool = &mut ctx.accounts.pool;
     pool.is_paused = false;
-
     msg!(
-        "✅  ShieldFi pool RESUMED by authority: {}",
-        ctx.accounts.authority.key()
+        "ShieldFi CIRCUIT BREAKER RESUMED: by {} at slot {}",
+        ctx.accounts.authority.key(),
+        Clock::get()?.slot
     );
-
     Ok(())
 }
 
@@ -52,9 +41,7 @@ pub struct PauseProtocol<'info> {
     /// Must be the pool's registered authority
     #[account(mut)]
     pub authority: Signer<'info>,
-
     pub token_mint: Account<'info, Mint>,
-
     #[account(
         mut,
         seeds = [b"pool", token_mint.key().as_ref()],
