@@ -16,6 +16,12 @@ pub fn pause_protocol(ctx: Context<PauseProtocol>) -> Result<()> {
     pool.is_paused = true;
 
     msg!(
+    "ShieldFi CIRCUIT BREAKER FIRED: paused by {} at slot {}",
+    ctx.accounts.authority.key(),
+    Clock::get()?.slot
+    );
+    
+    msg!(
         "⚠️  ShieldFi pool PAUSED by authority: {}",
         ctx.accounts.authority.key()
     );
