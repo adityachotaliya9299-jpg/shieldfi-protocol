@@ -89,3 +89,20 @@ The rate limit state is fully on-chain and auditable:
 - `pool.withdrawal_limit_bps` — the configured limit
 - `pool.rate_limit_slot` — slot of last withdrawal/borrow
 - `pool.withdrawn_this_slot` — amount extracted in current slot
+
+
+## Failure-Chain Analysis
+
+What invariant still holds when each security layer is bypassed:
+
+| Layer Bypassed | Next Defense | Invariant That Still Holds | Bounded Damage |
+|---|---|---|---|
+| Oracle guard fails | Rate limit guard | `withdrawn_this_slot ≤ pool * 10%` | Max $500/slot on $5K pool |
+| Rate limit bypassed | Circuit breaker | Admin can halt all ops in 1 tx | Damage limited to slots before pause |
+| Circuit breaker slow | Health factor check | `position.health ≥ 1.0` per tx | Each tx individually gated |
+| Health factor bypass | PDA vault authority | Only program can sign vault transfers | No direct vault access possible |
+| All layers fail | On-chain accounting | `vault.balance == deposits - borrows` | Accounting mismatch is detectable |
+
+**Key property:** Each layer fails independently and closed.
+Bypassing layer N does not weaken layer N+1.
+
