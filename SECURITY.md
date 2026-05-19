@@ -5,7 +5,7 @@ ShieldFi is built with a security-first mindset. Every instruction
 is gated by multiple layers of validation before any state changes occur.
 
 ## Security Features
-
+       
 ### 1. Emergency Circuit Breaker
 - Admin can pause ALL user operations in a single transaction
 - `pause_protocol` / `resume_protocol` instructions
