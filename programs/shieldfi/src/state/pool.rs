@@ -19,6 +19,7 @@ pub struct LendingPool {
     pub liquidation_threshold: u64,
     pub liquidation_bonus: u64,
 
+
     // ── Rate Limit ───────────────────────────────────────────────────
     pub withdrawal_limit_bps: u64,
     pub rate_limit_slot: u64,
@@ -54,8 +55,8 @@ impl LendingPool {
         + 8    // withdrawal_limit_bps
         + 8    // rate_limit_slot
         + 8    // withdrawn_this_slot
-        + 8    // borrow_rate_bps       ← NEW Phase 1
-        + 8    // treasury_accumulated  ← NEW Phase 1
+        + 8    // borrow_rate_bps       
+        + 8    // treasury_accumulated  
         + 1    // is_paused
         + 1;   // bump
 
