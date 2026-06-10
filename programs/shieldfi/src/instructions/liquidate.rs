@@ -52,7 +52,7 @@ pub fn liquidate(ctx: Context<Liquidate>, repay_amount: u64) -> Result<()> {
     require!(health < 10_000, ShieldFiError::PositionHealthy);
 
     // Partial liquidation: max 50% of debt per tx
-    let max_repay = total_debt.checked_div(2).ok_or(ShieldFiError::MathOverflow)?;
+    let max_repay = std::cmp::max(total_debt.checked_div(2).ok_or(ShieldFiError::MathOverflow)?, 1u64);
     require!(repay_amount <= max_repay, ShieldFiError::LiquidationTooLarge);
 
     // Collateral seized = repay * (1 + liquidation_bonus)

@@ -72,7 +72,7 @@ pub fn get_validated_price(
     // Guard 4: Staleness check
     let slots_elapsed = current_slot.saturating_sub(oracle_account.last_update_slot);
     require!(
-        slots_elapsed <= MAX_PRICE_AGE_SLOTS,
+        slots_elapsed < MAX_PRICE_AGE_SLOTS,
         ShieldFiError::StaleOraclePrice
     );
 
