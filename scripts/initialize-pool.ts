@@ -46,6 +46,8 @@ const IDL = {
       { name: "withdrawalLimitBps", type: "u64" },
       { name: "rateLimitSlot", type: "u64" },
       { name: "withdrawnThisSlot", type: "u64" },
+      { name: "borrowRateBps", type: "u64" },
+      { name: "treasuryAccumulated", type: "u64" },
       { name: "isPaused", type: "bool" },
       { name: "bump", type: "u8" },
     ]}},
