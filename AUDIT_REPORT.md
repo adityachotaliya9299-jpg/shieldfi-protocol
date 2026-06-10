@@ -101,7 +101,7 @@ neither exploitable in the current devnet deployment.
 
 **Severity:** Medium
 **Location:** `state/user_position.rs` — `health_factor()` method
-**Status:** Acknowledged — fix recommended before mainnet
+**Status:** ✅ FIXED — commit 9944a86
 **Exploitable on devnet:** No (requires precise dust-level positioning)
 
 **Description:**
