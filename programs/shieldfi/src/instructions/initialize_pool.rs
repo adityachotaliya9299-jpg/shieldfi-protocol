@@ -1,18 +1,13 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{Mint, Token, TokenAccount};
-
 use crate::errors::ShieldFiError;
 use crate::state::{LendingPool, PoolConfig};
 
 pub fn initialize_pool(ctx: Context<InitializePool>, config: PoolConfig) -> Result<()> {
-    require!(
-        config.collateral_factor < config.liquidation_threshold,
-        ShieldFiError::InvalidPoolConfig
-    );
+    require!(config.collateral_factor < config.liquidation_threshold, ShieldFiError::InvalidPoolConfig);
     require!(config.liquidation_threshold <= 10_000, ShieldFiError::InvalidPoolConfig);
     require!(config.reserve_factor <= 5_000, ShieldFiError::InvalidPoolConfig);
     require!(config.liquidation_bonus <= 2_000, ShieldFiError::InvalidPoolConfig);
-    // Rate limit must be between 1% and 50% per slot
     require!(
         config.withdrawal_limit_bps >= 100 && config.withdrawal_limit_bps <= 5_000,
         ShieldFiError::InvalidPoolConfig
@@ -35,15 +30,19 @@ pub fn initialize_pool(ctx: Context<InitializePool>, config: PoolConfig) -> Resu
     pool.withdrawal_limit_bps  = config.withdrawal_limit_bps;
     pool.rate_limit_slot       = 0;
     pool.withdrawn_this_slot   = 0;
+    // ── Phase 1 new fields ───────────────────────────────────────────
+    pool.borrow_rate_bps       = 50;  // Start at 0.5% APY base rate
+    pool.treasury_accumulated  = 0;
+    // ────────────────────────────────────────────────────────────────
     pool.is_paused             = false;
     pool.bump                  = bump;
 
     msg!(
-        "ShieldFi pool initialized. Mint: {} | Rate limit: {}bps/slot",
+        "ShieldFi pool initialized. Mint: {} | Rate limit: {}bps/slot | Base rate: {}bps APY",
         ctx.accounts.token_mint.key(),
         config.withdrawal_limit_bps,
+        pool.borrow_rate_bps,
     );
-
     Ok(())
 }
 
@@ -51,9 +50,7 @@ pub fn initialize_pool(ctx: Context<InitializePool>, config: PoolConfig) -> Resu
 pub struct InitializePool<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
-
     pub token_mint: Account<'info, Mint>,
-
     #[account(
         init,
         payer = authority,
@@ -62,7 +59,6 @@ pub struct InitializePool<'info> {
         bump
     )]
     pub pool: Account<'info, LendingPool>,
-
     #[account(
         init,
         payer = authority,
@@ -72,7 +68,6 @@ pub struct InitializePool<'info> {
         bump
     )]
     pub token_vault: Account<'info, TokenAccount>,
-
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
