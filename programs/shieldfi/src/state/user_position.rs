@@ -41,7 +41,7 @@ impl UserPosition {
         self.last_update_slot = current_slot;
     }
 
-    /// Health factor using CEILING DIVISION — fixes M-01
+    /// Health factor using CEILING DIVISION 
     pub fn health_factor(&self, collateral_factor: u64) -> u64 {
         let total_debt = self.borrowed_amount
             .checked_add(self.accrued_interest)
