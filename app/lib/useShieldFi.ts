@@ -52,7 +52,7 @@ function decodeLendingPool(data: Uint8Array) {
     totalDeposits: u64(), totalBorrows: u64(),
     reserveFactor: u64(), collateralFactor: u64(),
     liquidationThreshold: u64(), liquidationBonus: u64(),
-    withdrawalLimitBps: u64(), rateLimitSlot: u64(), withdrawnThisSlot: u64(),
+    withdrawalLimitBps: u64(), rateLimitSlot: u64(), withdrawnThisSlot: u64(), borrowRateBps: u64(), treasuryAccumulated: u64(),
     isPaused: bool(),
   };
 }
