@@ -216,7 +216,7 @@ require!(
 
 **Severity:** Medium
 **Location:** `state/oracle.rs` — staleness validation
-**Status:** Open — requires clarification and test coverage
+**Status:** ✅ FIXED — commit 9944a86
 **Exploitable on devnet:** Theoretically at exact slot boundary
 
 **Description:**
